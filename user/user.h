@@ -22,6 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+/// user defined system call
+int getname(void);
 
 // ulib.c
 int stat(const char*, struct stat*);

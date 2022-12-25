@@ -681,3 +681,12 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+///////////////////
+/// USER Defined function
+/////////////////////
+int getname(void) {
+  printf("Hasan Masum\n");
+  return 1;
+}

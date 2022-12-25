@@ -89,3 +89,12 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+
+/////////////////////////////
+// user defined system calls
+/////////////////////////////
+
+uint64 sys_getname(void){
+  return getname();
+}
