@@ -681,3 +681,32 @@ procdump(void)
     printf("\n");
   }
 }
+
+// trace(sys_call_num): system call
+int
+trace(int sys_call_num){
+  struct proc *currentProc = myproc();
+  currentProc->sys_call_number = sys_call_num;
+  return 0;
+}
+
+// system call
+int
+sysinfo(void){
+  printf("\n\nsysinfo system call prints:\n");
+
+  // prints the number of free memory available in the system in bytes
+  printf("free-memory: %d\n", getFreeMemorySize());
+
+  // calculate the number of existing processes in the current system
+  int nproc = 0;
+  struct proc *p = myproc(); // current proccess
+  for(p = proc; p < &proc[NPROC]; p++){
+    if(p->state != UNUSED){
+      nproc++;
+    }
+  }
+  // prints the number of existing processes in the current system
+  printf("nproc: %d\n\n", nproc);
+  return 0;
+}

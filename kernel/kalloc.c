@@ -80,3 +80,25 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+/**
+ * @brief calculate the free memory in bytes
+ * from free list.
+ * kernel maintains a linked-list (named freelist ) of free memory pages in
+ * kernel/kalloc.c in the kmem struct
+ *
+ * @return size of the free memory in bytes
+ */
+int
+getFreeMemorySize(void)
+{
+  struct run *r;
+  int n = 0;
+
+  acquire(&kmem.lock);
+  for(r = kmem.freelist; r; r = r->next)
+    n += PGSIZE;
+  release(&kmem.lock);
+
+  return n;
+}

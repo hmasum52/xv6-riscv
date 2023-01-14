@@ -89,3 +89,19 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// my system calls
+uint64
+sys_trace(void)
+{
+  int sysCallNum;
+  argint(0, &sysCallNum); // get the sysCallNum from the stack
+  trace(sysCallNum); // call the trace function
+  return 0;
+}
+
+uint64
+sys_sysinfo(void){
+  sysinfo();
+  return 0;
+}
