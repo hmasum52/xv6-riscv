@@ -89,3 +89,25 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64 sys_settickets(void)
+{
+  int n;
+  argint(0, &n);
+  if(n<=0){
+    //printf("Error: tickets must be greater than 0\n");
+    return -1;
+  }
+  //printf("kernel/sysproc.c->sys_settickets()\n");
+  //printf("sys_settickets: %d\n", n);
+  settickets(n);
+  return 0;
+}
+
+uint64 sys_getpinfo(void)
+{
+  struct pstat *ps;
+  argaddr(0, (uint64*)&ps);
+  //printf("kernel/sysproc.c->sys_getpinfo()\n");
+  return getpinfo(ps);
+}
