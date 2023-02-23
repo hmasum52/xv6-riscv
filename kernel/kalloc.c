@@ -14,6 +14,10 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+// use a fixed size array where you can index 
+// by the page's physical address divided by page size
+int page_ref_count[PHYSTOP / PGSIZE];
+
 struct run {
   struct run *next;
 };
@@ -76,7 +80,51 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
+  page_ref_count[(uint64)r / PGSIZE] = 1;
+
   if(r)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
+}
+
+// increase the reference count of the page
+void
+kincrease_ref(uint64 pa)
+{
+  // panic if the page is not allocated
+  if(page_ref_count[(uint64)pa / PGSIZE] == 0)
+    panic("kincreaseref");
+  acquire(&kmem.lock);
+  page_ref_count[(uint64)pa / PGSIZE]++;
+  release(&kmem.lock);
+}
+
+// decrease the reference count of the page
+void
+kdecrease_ref(uint64 pa)
+{
+  // panic if the page is not allocated
+  if(page_ref_count[(uint64)pa / PGSIZE] == 0)
+    panic("kdecreaseref");
+  acquire(&kmem.lock);
+  page_ref_count[(uint64)pa / PGSIZE]--;
+  release(&kmem.lock);
+  // garbage collect the page if the reference count is 0
+  if(page_ref_count[(uint64)pa / PGSIZE] == 0)
+    kfree((void*)pa);
+}
+
+// print number of pages in freelist
+uint64
+kpages_in_freelist(void){
+  struct run *r;
+  int count = 0;
+  acquire(&kmem.lock);
+  r = kmem.freelist;
+  while(r){
+    count++;
+    r = r->next;
+  }
+  release(&kmem.lock);
+  return count;
 }

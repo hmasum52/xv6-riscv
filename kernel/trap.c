@@ -67,7 +67,37 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause() == 15){
+    pte_t *pte; // new page table entry
+    uint64 pa; // new physical address
+    uint flags; 
+    char* mem; 
+
+    // get virtual address from stval
+    uint64 va = PGROUNDDOWN(r_stval());
+    if(va >= MAXVA){
+      exit(-1);
+    }
+    if ((pte = walk(p->pagetable, va, 0)) == 0)
+      panic("usertrap: pte should exist");
+    if ((*pte & PTE_V) == 0)
+      panic("usertrap: page not present");
+    pa = PTE2PA(*pte);
+    flags = PTE_FLAGS(*pte);
+    flags = flags | PTE_W;
+    flags = flags & ~PTE_COW;
+
+    // allocate new page
+    if((mem = kalloc()) == 0) // ref count = 1
+      panic("usertrap: out of memory");
+    memmove(mem, (char*)pa, PGSIZE);
+    if(mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags) != 0){
+      kfree(mem);
+      panic("usertrap: mappages failed");
+    }
+    kdecrease_ref(pa);
+  } 
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);

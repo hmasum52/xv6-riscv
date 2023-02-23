@@ -89,3 +89,11 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_stats(void){
+  //printf("sys_stats() called\n");
+  // for all process print number of pages
+  stats();
+  return 0;
+}
