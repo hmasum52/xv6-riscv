@@ -65,6 +65,14 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if (r_scause() == 15){
+    uint64 va = r_stval(); // va is the faulting virtual address
+    // check if the address is valid
+    if( (va >= p->sz )
+      || check_if_cow(p->pagetable, va) !=0
+      || alloc_cow_page(p->pagetable, PGROUNDDOWN(va)) == 0){
+      setkilled(p);
+    }
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {

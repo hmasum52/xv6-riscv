@@ -681,3 +681,17 @@ procdump(void)
     printf("\n");
   }
 }
+
+// print stats
+void
+stats(void){
+  struct proc *p;
+  int pages_used = 0;
+  for (p = proc; p < &proc[NPROC]; p++){
+    if (p->state == UNUSED)
+      continue;
+    pages_used += p->sz / PGSIZE;
+  }
+  printf("Total pages used: %d\n", pages_used);
+  printf("Total pages in freelist (free pages): %d\n", k_pages_in_freelist());
+}

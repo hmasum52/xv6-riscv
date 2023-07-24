@@ -308,22 +308,35 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
   pte_t *pte;
   uint64 pa, i;
   uint flags;
-  char *mem;
+  //char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
     if((*pte & PTE_V) == 0)
       panic("uvmcopy: page not present");
+
+    // turn on the cow flag if the page is writable
+    // also turn off the writable flag
+    if(*pte & PTE_W){
+       *pte &= ~PTE_W;
+       *pte |= PTE_COW;
+    }
+
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
+    
+    //if((mem = kalloc()) == 0)
+    //  goto err;
+    //memmove(mem, (char*)pa, PGSIZE);
+    //if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
+    if(mappages(new, i, PGSIZE, pa, flags) != 0){
+      //kfree(mem);
       goto err;
     }
+    // increase reference count of the page
+    if( (k_increase_ref_cnt(pa)) != 0 )
+      goto err;
   }
   return 0;
 
@@ -345,6 +358,26 @@ uvmclear(pagetable_t pagetable, uint64 va)
   *pte &= ~PTE_U;
 }
 
+int check_if_cow(pagetable_t pagetable, uint64 va){
+  // check if virtual address va is valid
+  if(va >= MAXVA)
+    return -1; // error
+
+  // get page table entry of va
+  pte_t *pte;
+  if((pte = walk(pagetable, va, 0)) == 0)
+    return -1;
+
+  // check if pte is valid
+  if( !(*pte & PTE_V) )
+    return -1; // error
+
+  //check if copy on write flag is set
+  if( !(*pte & PTE_COW) )
+    return -1; // error
+
+  return 0; // va is valid and copy on write flag is set
+}
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.
@@ -356,6 +389,9 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
+    if(check_if_cow(pagetable, va0)==0){
+      pa0 = (uint64)alloc_cow_page(pagetable, va0);
+    }
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (dstva - va0);
